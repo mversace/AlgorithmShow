@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="AlgorithmManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SortManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PathManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="IAlgorithm.h">
+      <Filter>头文件\接口类</Filter>
+    </ClInclude>
+    <ClInclude Include="IManager.h">
+      <Filter>头文件\接口类</Filter>
+    </ClInclude>
+    <ClInclude Include="AlgorithmShow.h" />
+    <ClInclude Include="SortAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PathAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="AlgorithmShow.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="small.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{2961e7d8-6c49-4222-a3ed-7c3adbf00857}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{6a71d036-39b5-4f91-aab1-d74ae3092642}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\接口类">
+      <UniqueIdentifier>{def109fe-bacd-45fe-90e9-2a895f04b77b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AlgorithmShow.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AlgorithmShow.cpp" />
+  </ItemGroup>
+</Project>
