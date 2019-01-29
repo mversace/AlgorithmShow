@@ -112,9 +112,9 @@ public:
 
 		drawJumpPoints(hdc, hBrushGreen, hBrushRed, hBrushBlue, hBrushBlack);
 
-		// 绘制右边的_tips
+		// 绘制右边的_tipsShow
 		RECT rc = { 1250, 300, 1500, 800 };
-		DrawText(hdc, _tips.c_str(), _tips.length(), &rc, DT_LEFT | DT_TOP);
+		DrawText(hdc, _tipsShow.c_str(), _tipsShow.length(), &rc, DT_LEFT | DT_TOP);
 	}
 
 protected:
@@ -201,6 +201,7 @@ protected:
 protected:
 	int _x = 0;
 	int _y = 0;
+	std::wstring _tipsShow;
 	std::wstring _tips;
 	std::vector<std::vector<int>> _vv;
 	std::vector<int> _vecPath;
@@ -225,7 +226,7 @@ class DFSPath : public BasePath
 public:
 	DFSPath()
 	{
-		_tips = L"深度优先算法DFS:\n"
+		_tipsShow = L"深度优先算法DFS:\n"
 			   L"从起点朝某个方向走到底，回溯\n"
 			   L"根据所有搜寻的点，查询最短路径\n";
 	}
@@ -295,7 +296,7 @@ class BFSPath : public BasePath
 public:
 	BFSPath()
 	{
-		_tips = L"广度优先搜索BFS:\n"
+		_tipsShow = L"广度优先搜索BFS:\n"
 			L"依次遍历当前所有点的紧挨着的节点";
 	}
 
@@ -454,6 +455,8 @@ public:
 				_vv[p / _hashKeyDef][p % _hashKeyDef] = E_EPT_CHECKED;
 
 			CheckAndAddNodes(s1, mapCost, p);
+
+			_tipsShow = _tips + L"\n搜索节点数:" + std::to_wstring(mapCost.size());
 		}
 
 		_vecPath = std::move(mapCost[_end].v);
@@ -744,6 +747,8 @@ public:
 
 			Sleep(_speed);
 		}
+
+		return false;
 	}
 
 	virtual void InitStartData(pqType& s) override
