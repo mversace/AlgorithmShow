@@ -10,6 +10,7 @@ enum ePathAlgorithm
 	E_EPA_Dijkstra,
 	E_EPA_GREEDY,
 	E_EPA_ASTAR,
+	E_EPA_JPS,
 	E_EPA_MAX,
 };
 
@@ -24,12 +25,14 @@ public:
 		_vAlgorithm.push_back(&_Dijkstra);
 		_vAlgorithm.push_back(&_greedy);
 		_vAlgorithm.push_back(&_AStar);
+		_vAlgorithm.push_back(&_JPS);
 
 		_uMap[E_EPA_DFS] = &_dfs;
 		_uMap[E_EPA_BFS] = &_bfs;
 		_uMap[E_EPA_Dijkstra] = &_Dijkstra;
 		_uMap[E_EPA_GREEDY] = &_greedy;
 		_uMap[E_EPA_ASTAR] = &_AStar;
+		_uMap[E_EPA_JPS] = &_JPS;
 
 		init();
 	}
@@ -62,6 +65,7 @@ public:
 			L"   --按键3:Dijkstra算法\n"
 			L"   --按键4:贪婪最佳算法\n"
 			L"   --按键5:A*算法"
+			L"   --按键6:JPS算法"
 			,
 			g_speed);
 		DrawText(hdc, cTips, len, &rc, DT_LEFT | DT_TOP);
@@ -137,4 +141,5 @@ private:
 	DijkstraPath _Dijkstra;
 	GreedyPath _greedy;
 	AStarPath _AStar;
+	JPSPath _JPS;
 };

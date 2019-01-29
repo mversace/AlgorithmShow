@@ -70,6 +70,9 @@ public:
 		_vecPath.clear();
 	}
 
+	virtual void drawJumpPointLine(HDC hdc, HBRUSH hBrushGreen, HBRUSH hBrushRed, HBRUSH hBrushBlue, HBRUSH hBrushBlack) {};
+	virtual void drawJumpPoints(HDC hdc, HBRUSH hBrushGreen, HBRUSH hBrushRed, HBRUSH hBrushBlue, HBRUSH hBrushBlack) {}
+
 	void drawV(HDC hdc, HBRUSH hBrushGreen, HBRUSH hBrushRed, HBRUSH hBrushBlue, HBRUSH hBrushBlack) override
 	{
 		for (int i = 0; i < _height; ++i)
@@ -97,17 +100,17 @@ public:
 			}
 		}
 
+		drawJumpPointLine(hdc, hBrushGreen, hBrushRed, hBrushBlue, hBrushBlack);
+
 		// 绘制最终路径
-		do 
+		for (auto &item : _vecPath)
 		{
-			std::lock_guard<std::mutex> lg(_mutex);
-			for (auto &item : _vecPath)
-			{
-				RECT rc = { item % _hashKeyDef * _cellW + _x, item / _hashKeyDef * _cellW + _y, item % _hashKeyDef * _cellW + _x + _cellW, item / _hashKeyDef * _cellW + _y + _cellW };
-				FillRect(hdc, &rc, hBrushGreen);
-				FrameRect(hdc, &rc, hBrushBlack);
-			}
-		} while (false);
+			RECT rc = { item % _hashKeyDef * _cellW + _x, item / _hashKeyDef * _cellW + _y, item % _hashKeyDef * _cellW + _x + _cellW, item / _hashKeyDef * _cellW + _y + _cellW };
+			FillRect(hdc, &rc, hBrushGreen);
+			FrameRect(hdc, &rc, hBrushBlack);
+		}
+
+		drawJumpPoints(hdc, hBrushGreen, hBrushRed, hBrushBlue, hBrushBlack);
 
 		// 绘制右边的_tips
 		RECT rc = { 1250, 300, 1500, 800 };
@@ -351,19 +354,67 @@ public:
 */
 class DGAPathbase : public BasePath
 {
+protected:
+	// 结点cost
+	struct tBestCost
+	{
+		tBestCost() : cost(INT_MAX) {}
+
+		int hashKey; // 该结点的hashkey
+		std::vector<int> v; // 到达该节点的最短路径
+		int cost; // 到达该节点的cost
+	};
+
+	using pqItemType = std::pair<int, int>;
+	using pqCmpType = std::function<bool(const pqItemType&, const pqItemType&)>;
+	using pqType = std::priority_queue<pqItemType, std::vector<pqItemType>, pqCmpType>;
+
+	virtual void InitStartData(pqType& s)
+	{
+		s.emplace(0, _start);
+	}
+
+	virtual void CheckAndAddNodes(pqType& s, std::unordered_map<int, tBestCost>& mapCost, int curKey)
+	{
+		auto itCur = mapCost.find(curKey);
+		if (itCur == mapCost.end())
+		{
+			// 加入优先级队列中的节点必定是计算过的，没计算则代表出错了
+			return;
+		}
+
+		for (eDir e = E_ED_UP; e <= E_ED_LEFTUP; e = eDir(e + 1))
+		{
+			int keyTemp = chgDir(curKey, e);
+			if (!isValid(keyTemp)) continue;
+
+			int costTemp = getDijkstraCost(e, itCur->second.cost) + getGreedyCost(keyTemp);
+
+			// 更新周围8方向的节点cost
+			auto it = mapCost.find(keyTemp);
+
+			// 加入查找队列
+			if (it == mapCost.end())
+				s.emplace(costTemp, keyTemp);
+
+			if (it == mapCost.end() || it->second.cost > costTemp)
+			{
+				mapCost[keyTemp].hashKey = keyTemp;
+				mapCost[keyTemp].v = itCur->second.v;
+				mapCost[keyTemp].v.emplace_back(keyTemp);
+				mapCost[keyTemp].cost = costTemp;
+			}
+
+			Sleep(_speed);
+		}
+	}
+
+	virtual int getDijkstraCost(eDir dir, int curCost) = 0;
+	virtual int getGreedyCost(int curKey) = 0;
+
 public:
 	void threadAlgorithm()
 	{
-		// 结点cost
-		struct tBestCost
-		{
-			tBestCost() : cost(INT_MAX) {}
-
-			int hashKey; // 该结点的hashkey
-			std::vector<int> v; // 到达该节点的最短路径
-			int cost; // 到达该节点的cost
-		};
-
 		// 存储已搜索格子的cost值
 		// key = i * _hashKeyDef + j
 		// tBestCost.cost 到目前节点的代价
@@ -377,23 +428,17 @@ public:
 		mapCost[hashStart].cost = 0;
 
 		// 查找优先级队列，按照结点cost升序
-		auto cmp = [](const std::pair<int, int> &v1, const std::pair<int, int> &v2)->bool {
+		pqCmpType cmp = [](const std::pair<int, int> &v1, const std::pair<int, int> &v2)->bool {
 			return v1.first > v2.first;
 		};
-		std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, decltype(cmp)> s1(cmp);
-		s1.emplace(0, hashStart);
+		pqType s1(cmp);
+		
+		InitStartData(s1);
 
 		while (!s1.empty())
 		{
 			auto tData = std::move(s1.top());
 			s1.pop();
-
-			auto itCur = mapCost.find(tData.second);
-			if (itCur == mapCost.end())
-			{
-				// 加入优先级队列中的节点必定是计算过的，没计算则代表出错了
-				break;
-			}
 
 			_keyChecking = tData.second;
 			auto p = _keyChecking;
@@ -408,41 +453,13 @@ public:
 			if (p != _start)
 				_vv[p / _hashKeyDef][p % _hashKeyDef] = E_EPT_CHECKED;
 
-			for (eDir e = E_ED_UP; e <= E_ED_LEFTUP; e = eDir(e + 1))
-			{
-				int keyTemp = chgDir(p, e);
-				if (!isValid(keyTemp)) continue;
-
-				int costTemp = getDijkstraCost(e, itCur->second.cost) + getGreedyCost(keyTemp);
-
-				// 更新周围8方向的节点cost
-				auto it = mapCost.find(keyTemp);
-
-				// 加入查找队列
-				if (it == mapCost.end())
-					s1.emplace(costTemp, keyTemp);
-
-				if (it == mapCost.end() || it->second.cost > costTemp)
-				{
-					mapCost[keyTemp].hashKey = keyTemp;
-					mapCost[keyTemp].v = itCur->second.v;
-					mapCost[keyTemp].v.emplace_back(keyTemp);
-					mapCost[keyTemp].cost = costTemp;
-				}
-
-				Sleep(_speed);
-			}
+			CheckAndAddNodes(s1, mapCost, p);
 		}
 
 		_vecPath = std::move(mapCost[_end].v);
 
 		BasePath::threadAlgorithm();
 	}
-
-protected:
-	virtual int getDijkstraCost(eDir dir, int curCost) = 0;
-
-	virtual int getGreedyCost(int curKey) = 0;
 
 protected:
 	int dirCost = 3; // 正统4方向cost
@@ -603,5 +620,215 @@ protected:
 
 		// 因为可以斜着走
 		return (max(iDiff, jDiff) - min(iDiff, jDiff)) * dirCost + min(iDiff, jDiff) * diagonalCost;
+	}
+};
+
+/**
+ * JPS算法，基于A*的优化，主要是优化openset
+ */
+class JPSPath : public AStarPath
+{
+private:
+	// 记录每个结点需要检查的方向 key=hash value=dir1|dir2|...
+	std::unordered_map<int, std::unordered_set<eDir>> _umapChecked;
+	std::unordered_set<int> _usetJP; // 跳点
+	HPEN _hPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 255));
+
+public:
+	JPSPath()
+	{
+		_tips = L"JPS算法\n"
+			L"基于A*的优化\n"
+			L"主要是优化openset\n";
+
+		// 修正cost值
+		dirCost = 3; // 正统4方向cost
+		diagonalCost = 5; // 斜方向cost
+	}
+
+	void clearData() override
+	{
+		AStarPath::clearData();
+
+		_umapChecked.clear();
+		_usetJP.clear();
+	}
+
+	#define CalcNewDir(a, b) eDir((a + E_ED_NONE + b) % E_ED_NONE)
+
+	// 在JPS中mapCost中存的cost仅仅是DijkstraCost
+	bool searchJumpPoint(pqType& s, std::unordered_map<int, tBestCost>& mapCost, int curKey, eDir dir)
+	{
+		auto itCur = mapCost.find(curKey);
+		auto target = chgDir(curKey, dir);
+		while (isValid(target))
+		{
+			if (itCur == mapCost.end())
+			{
+				// 发生了错误
+				return false;
+			}
+
+			bool bFind = false;
+
+			// 这里就不记录这个了
+			// _vv[target / _hashKeyDef][target % _hashKeyDef] = E_EPT_CHECKED;
+
+			// 添加openset
+			int cost = getDijkstraCost(dir, itCur->second.cost);
+
+			// 添加mapcost
+			auto itTemp = mapCost.find(target);
+			if (itTemp == mapCost.end() || cost < itTemp->second.cost)
+			{
+				mapCost[target].hashKey = target;
+				mapCost[target].v = itCur->second.v;
+				mapCost[target].v.emplace_back(target);
+				mapCost[target].cost = cost;
+			}
+
+			// 斜方向
+			if (dir % 2 == 1)
+			{
+				// 以当前方向为'前'，遍历'左上''右上'方向
+				bFind |= searchJumpPoint(s, mapCost, target, CalcNewDir(dir, -1));
+				bFind |= searchJumpPoint(s, mapCost, target, CalcNewDir(dir, 1));
+			}
+			else
+			{
+				// 以当前方向为'前'，左block，左上可走，则当前点为跳点
+				// 后续搜寻点为 上和左上
+				// 同理可以还有 上和右上
+				auto left = chgDir(target, CalcNewDir(dir, -2));
+				auto leftUp = chgDir(target, CalcNewDir(dir, -1));
+				auto right = chgDir(target, CalcNewDir(dir, 2));
+				auto rightUp = chgDir(target, CalcNewDir(dir, 1));
+
+				// 当前点是跳点
+				if (target == _end)
+				{
+					bFind = true;
+				}
+				else 
+				{
+					if (!isValid(left) && isValid(leftUp))
+					{
+						_umapChecked[target].insert(CalcNewDir(dir, -1));
+						bFind = true;
+					}
+					if (!isValid(right) && isValid(rightUp))
+					{
+						_umapChecked[target].insert(CalcNewDir(dir, 1));
+						bFind = true;
+					}
+				}
+			}
+
+			// 添加搜寻map
+			_umapChecked[target].insert(dir);
+
+			// 把当前结点的前方向节点继续加入队列
+			if (bFind)
+			{
+				s.emplace(cost + getGreedyCost(target), target);
+
+				_usetJP.insert(target);
+
+				return true;
+			}
+			else
+			{
+				itCur = mapCost.find(target);
+				target = chgDir(target, dir);
+			}
+
+			Sleep(_speed);
+		}
+	}
+
+	virtual void InitStartData(pqType& s) override
+	{
+		AStarPath::InitStartData(s);
+		
+		// 初始化搜索方向，8方向
+		_umapChecked[_start] = { E_ED_UP, E_ED_RIGHT, E_ED_DOWN, E_ED_LEFT, E_ED_LEFTUP, E_ED_RIGHTUP, E_ED_RIGHTDOWN, E_ED_LEFTDOWN };
+
+	}
+
+	virtual void CheckAndAddNodes(pqType& s, std::unordered_map<int, tBestCost>& mapCost, int curKey) override
+	{
+		auto itCur = mapCost.find(curKey);
+		if (itCur == mapCost.end())
+		{
+			// 加入优先级队列中的节点必定是计算过的，没计算则代表出错了
+			return;
+		}
+
+		// 该点需要查找那些方向？
+		auto dirSet = _umapChecked[curKey];
+		if (dirSet.empty())
+		{
+			// 此处没有值代表数据出错了
+			return;
+		}
+
+		for (eDir e = E_ED_UP; e <= E_ED_LEFTUP; e = eDir(e + 1))
+		{
+			if (dirSet.count(e))
+				searchJumpPoint(s, mapCost, curKey, e);
+		}
+	}
+
+	virtual void drawJumpPointLine(HDC hdc, HBRUSH hBrushGreen, HBRUSH hBrushRed, HBRUSH hBrushBlue, HBRUSH hBrushBlack) override
+	{
+		// GDI绘制效率好差，这里就不再优化了
+		HPEN hOldPen = (HPEN)SelectObject(hdc, _hPen);
+
+		for (auto &item : _umapChecked)
+		{
+			int left = item.first % _hashKeyDef * _cellW + _x;
+			int right = left + _cellW;
+			int top = item.first / _hashKeyDef * _cellW + _y;
+			int bottom = top + _cellW;
+
+			// 横
+			if (item.second.count(E_ED_LEFT) || item.second.count(E_ED_RIGHT))
+			{
+				MoveToEx(hdc, left, (top + bottom) / 2, nullptr);
+				LineTo(hdc, right, (top + bottom) / 2);
+			}
+
+			// 竖
+			if (item.second.count(E_ED_UP) || item.second.count(E_ED_DOWN))
+			{
+				MoveToEx(hdc, (left + right) / 2, top, nullptr);
+				LineTo(hdc, (left + right) / 2, bottom);
+			}
+
+			// 左下到右上斜
+			if (item.second.count(E_ED_RIGHTUP) || item.second.count(E_ED_LEFTDOWN))
+			{
+				MoveToEx(hdc, left, bottom, nullptr);
+				LineTo(hdc, right, top);
+			}
+
+			// 右下到左上斜
+			if (item.second.count(E_ED_LEFTUP) || item.second.count(E_ED_RIGHTDOWN))
+			{
+				MoveToEx(hdc, left, top, nullptr);
+				LineTo(hdc, right, bottom);
+			}
+		}
+		SelectObject(hdc, hOldPen);
+	}
+
+	virtual void drawJumpPoints(HDC hdc, HBRUSH hBrushGreen, HBRUSH hBrushRed, HBRUSH hBrushBlue, HBRUSH hBrushBlack)
+	{
+		for (auto &item : _usetJP)
+		{
+			RECT rc = { item % _hashKeyDef * _cellW + _x, item / _hashKeyDef * _cellW + _y, item % _hashKeyDef * _cellW + _x + _cellW, item / _hashKeyDef * _cellW + _y + _cellW };
+			FillRect(hdc, &rc, hBrushRed);
+			FrameRect(hdc, &rc, hBrushRed);
+		}
 	}
 };
