@@ -366,6 +366,8 @@ protected:
 		int cost; // 到达该节点的cost
 	};
 
+	int _openSetTotal = 0;
+
 	using pqItemType = std::pair<int, int>;
 	using pqCmpType = std::function<bool(const pqItemType&, const pqItemType&)>;
 	using pqType = std::priority_queue<pqItemType, std::vector<pqItemType>, pqCmpType>;
@@ -396,7 +398,10 @@ protected:
 
 			// 加入查找队列
 			if (it == mapCost.end())
+			{
 				s.emplace(costTemp, keyTemp);
+				++_openSetTotal;
+			}
 
 			if (it == mapCost.end() || it->second.cost > costTemp)
 			{
@@ -408,6 +413,12 @@ protected:
 
 			Sleep(_speed);
 		}
+	}
+
+	void clearData() override
+	{
+		BasePath::clearData();
+		_openSetTotal = 0;
 	}
 
 	virtual int getDijkstraCost(eDir dir, int curCost) = 0;
@@ -456,7 +467,9 @@ public:
 
 			CheckAndAddNodes(s1, mapCost, p);
 
-			_tipsShow = _tips + L"\n搜索节点数:" + std::to_wstring(mapCost.size());
+			_tipsShow = _tips + L"\n搜索节点数:" + std::to_wstring(mapCost.size())
+						+ L"\nopenset当前:" + std::to_wstring(s1.size())
+						+ L"\nopenset总计:" + std::to_wstring(_openSetTotal);
 		}
 
 		_vecPath = std::move(mapCost[_end].v);
@@ -734,7 +747,7 @@ public:
 			if (bFind)
 			{
 				s.emplace(cost + getGreedyCost(target), target);
-
+				++_openSetTotal;
 				_usetJP.insert(target);
 
 				return true;
