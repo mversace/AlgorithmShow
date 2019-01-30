@@ -64,8 +64,8 @@ public:
 			L"   --按键2:广度优先算法BFS\n"
 			L"   --按键3:Dijkstra算法\n"
 			L"   --按键4:贪婪最佳算法\n"
-			L"   --按键5:A*算法"
-			L"   --按键6:JPS算法"
+			L"   --按键5:A*算法\n"
+			L"   --按键6:JPS算法\n"
 			,
 			g_speed);
 		DrawText(hdc, cTips, len, &rc, DT_LEFT | DT_TOP);
@@ -130,6 +130,46 @@ private:
 
 		// 终点
 		vv[60][130] = E_EPT_END;
+	}
+
+	void initBlocks2(std::vector<std::vector<int>> &vv)
+	{
+		/*
+		形如：
+		------
+		*	    |   #
+		------
+		*/
+		// 墙
+		for (int j = 50; j < 90; ++j)
+		{
+			for (int i = 20; i < 25; ++i)
+				vv[i][j] = 1;
+			for (int i = 75; i < 80; ++i)
+				vv[i][j] = 1;
+		}
+
+		for (int i = 20; i < 80; ++i)
+		{
+			for (int j = 90; j < 95; ++j)
+				vv[i][j] = 1;
+		}
+
+		for (int i = 20; i < 60; ++i)
+		{
+			vv[i][50] = 1;
+		}
+
+		for (int i = 75; i < 90; ++i)
+		{
+			vv[i][49] = 1;
+		}
+
+		// 起始位置
+		vv[30][80] = E_EPT_END;
+
+		// 终点
+		vv[80][130] = E_EPT_START;
 	}
 
 private:

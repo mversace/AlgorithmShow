@@ -736,7 +736,7 @@ private:
 		int len = (int)v.size();
 
 		if (len < 2) return;
-		if (len <= 5)
+		if (len <= 10)
 		{
 			// 小于5个时采用插入排序
 			for (int i = 1; i < len; ++i)

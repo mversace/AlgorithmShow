@@ -372,7 +372,7 @@ protected:
 	using pqCmpType = std::function<bool(const pqItemType&, const pqItemType&)>;
 	using pqType = std::priority_queue<pqItemType, std::vector<pqItemType>, pqCmpType>;
 
-	virtual void InitStartData(pqType& s)
+	virtual void InitStartData(pqType& s, std::unordered_map<int, tBestCost>& mapCost)
 	{
 		s.emplace(0, _start);
 	}
@@ -391,7 +391,7 @@ protected:
 			int keyTemp = chgDir(curKey, e);
 			if (!isValid(keyTemp)) continue;
 
-			int costTemp = getDijkstraCost(e, itCur->second.cost) + getGreedyCost(keyTemp);
+			int costTemp = getDijkstraCost(e, itCur->second.cost - getGreedyCost(itCur->second.hashKey)) + getGreedyCost(keyTemp);
 
 			// 更新周围8方向的节点cost
 			auto it = mapCost.find(keyTemp);
@@ -445,7 +445,7 @@ public:
 		};
 		pqType s1(cmp);
 		
-		InitStartData(s1);
+		InitStartData(s1, mapCost);
 
 		while (!s1.empty())
 		{
@@ -467,12 +467,15 @@ public:
 
 			CheckAndAddNodes(s1, mapCost, p);
 
-			_tipsShow = _tips + L"\n搜索节点数:" + std::to_wstring(mapCost.size())
-						+ L"\nopenset当前:" + std::to_wstring(s1.size())
-						+ L"\nopenset总计:" + std::to_wstring(_openSetTotal);
+			_tipsShow = _tips + L"\n搜索节点数: " + std::to_wstring(mapCost.size())
+				+ L"\nopenset当前: " + std::to_wstring(s1.size())
+				+ L"\nopenset总计: " + std::to_wstring(_openSetTotal);
 		}
 
 		_vecPath = std::move(mapCost[_end].v);
+
+		_tipsShow += L"\n\n路径长度: " + std::to_wstring(_vecPath.size())
+			+ L"\n路径代价: " + std::to_wstring(mapCost[_end].cost);
 
 		BasePath::threadAlgorithm();
 	}
@@ -587,10 +590,18 @@ public:
 		// A*算法需要DijkstraCos占主要，这样看起来最终路径才更靠近与最优路径
 		// 调整以下参数来保证getDijkstraCost计算出较大值
 		dirCost = 3; // 正统4方向cost
-		diagonalCost = 20; // 斜方向cost
+		diagonalCost = 5; // 斜方向cost
+
+		_greedy = 0.3;
 	}
 
 protected:
+	virtual void InitStartData(pqType& s, std::unordered_map<int, tBestCost>& mapCost)
+	{
+		DGAPathbase::InitStartData(s, mapCost);
+		mapCost[_start].cost = getGreedyCost(_start);
+	}
+
 	virtual int getDijkstraCost(eDir dir, int curCost)
 	{
 		// Dijkstra利用DP思想，计算当前节点curKey的cost
@@ -635,8 +646,11 @@ protected:
 		int jDiff = abs(curKey % _hashKeyDef - _end % _hashKeyDef);
 
 		// 因为可以斜着走
-		return (max(iDiff, jDiff) - min(iDiff, jDiff)) * dirCost + min(iDiff, jDiff) * diagonalCost;
+		return ((max(iDiff, jDiff) - min(iDiff, jDiff)) * dirCost + min(iDiff, jDiff) * diagonalCost) * _greedy;
 	}
+
+private:
+	double _greedy = 0.5;
 };
 
 /**
@@ -677,6 +691,11 @@ public:
 	{
 		auto itCur = mapCost.find(curKey);
 		auto target = chgDir(curKey, dir);
+
+		// 当4方向时还需要搜索自身所在点
+		if (dir % 2 == 0)
+			target = curKey;
+
 		while (isValid(target))
 		{
 			if (itCur == mapCost.end())
@@ -744,8 +763,10 @@ public:
 			_umapChecked[target].insert(dir);
 
 			// 把当前结点的前方向节点继续加入队列
-			if (bFind)
+			if (bFind && !_usetJP.count(target))
 			{
+				// 如果该跳点没有加入过则加入，因为加入过的一定是斜方向寻找跳过来的
+				// 实际上该跳点一定没有从openset中取出来过
 				s.emplace(cost + getGreedyCost(target), target);
 				++_openSetTotal;
 				_usetJP.insert(target);
@@ -764,13 +785,13 @@ public:
 		return false;
 	}
 
-	virtual void InitStartData(pqType& s) override
+	virtual void InitStartData(pqType& s, std::unordered_map<int, tBestCost>& mapCost) override
 	{
-		AStarPath::InitStartData(s);
+		AStarPath::InitStartData(s, mapCost);
 		
+		mapCost[_start].cost = 0;
 		// 初始化搜索方向，8方向
 		_umapChecked[_start] = { E_ED_UP, E_ED_RIGHT, E_ED_DOWN, E_ED_LEFT, E_ED_LEFTUP, E_ED_RIGHTUP, E_ED_RIGHTDOWN, E_ED_LEFTDOWN };
-
 	}
 
 	virtual void CheckAndAddNodes(pqType& s, std::unordered_map<int, tBestCost>& mapCost, int curKey) override
