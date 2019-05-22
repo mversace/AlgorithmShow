@@ -75,7 +75,7 @@ public:
 	{
 		// 初始化给所有
 		std::vector<std::vector<int>> vv(100, std::vector<int>(150, 0));
-		initBlocks1(vv);
+		initBlocks2(vv);
 
 		for (auto &item : _uMap)
 			item.second->setNeedData(&vv, 0, 0);

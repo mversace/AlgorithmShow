@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <mutex>
+#include <functional>
 
 __declspec(selectany) int g_speed = 30;
 
@@ -11,8 +12,18 @@ public:
 	IAlgorithm() = default;
 	virtual ~IAlgorithm()
 	{
-		stopAlgorithm();
+        stopAlgorithmItem();
+
+        // 主线程退出，此时线程还没有执行完，但类已经析构数据为空，此时线程会崩溃
+        // TRICK 关闭限速 等线程结束后再析构
+        while (_running)
+        {
+            /* do nothing */
+        }
 	}
+
+public:
+    bool isRun() { return _running; }
 
 public:
 	virtual void updateSpeed(int speed)
@@ -31,15 +42,9 @@ public:
 		_t.detach();
 	}
 
-	virtual void stopAlgorithm()
+	virtual void stopAlgorithmItem()
 	{
-		// 主线程退出，此时线程还没有执行完，但类已经析构数据为空，此时线程会崩溃
-		// TRICK 关闭限速 等线程结束后再析构
 		_speed = 0;
-		while (_running)
-		{
-			/* do nothing */
-		}
 	}
 
 	virtual void setNeedData(void* p, int left, int top) = 0;

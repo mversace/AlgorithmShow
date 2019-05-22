@@ -32,10 +32,25 @@ public:
 		startAlgorithmInner();
 	}
 
-	virtual void stopAlgorithm()
+    virtual void stopAlgorithm()
 	{
 		for (auto p : _vAlgorithm)
-			p->stopAlgorithm();
+			p->stopAlgorithmItem();
+
+        // 等待所有线程结束
+        bool isDone = false;
+        while (!isDone)
+        {
+            isDone = true;
+            for (auto p : _vAlgorithm)
+            {
+                if (p->isRun())
+                {
+                    isDone = false;
+                    break;
+                }
+            }
+        }
 	}
 
 	virtual void updateSpeed()

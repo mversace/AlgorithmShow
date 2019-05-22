@@ -17,7 +17,7 @@ class BaseSort : public IAlgorithm
 public:
 	virtual ~BaseSort()
 	{
-		stopAlgorithm();
+		
 	}
 
 public:
