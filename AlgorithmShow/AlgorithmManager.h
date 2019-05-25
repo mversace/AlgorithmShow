@@ -37,6 +37,12 @@ public:
 			_uMap[_eType]->startAlgorithm();
 	}
 
+    void stopAlgorithm()
+    {
+        for (auto& item : _uMap)
+            item.second->stopAlgorithm();
+    }
+
 	void updateSpeed()
 	{
 		if (_uMap.find(_eType) != _uMap.end())

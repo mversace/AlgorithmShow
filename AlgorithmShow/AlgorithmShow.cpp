@@ -166,6 +166,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		AlgorithmManager::getInstance()->keyDown(wParam);
 		break;
 	case WM_DESTROY:
+        AlgorithmManager::getInstance()->stopAlgorithm();
 		PostQuitMessage(0);
 		break;
 	default:

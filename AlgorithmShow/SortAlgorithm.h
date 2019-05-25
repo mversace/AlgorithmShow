@@ -153,6 +153,8 @@ protected:
 				std::lock_guard<std::mutex> lg(_mutex);
 				for (int i = 0; i < len; ++i)
 					_sortedIdxSet.insert(i);
+
+                break;
 			}
 			else
 			{

@@ -12,14 +12,15 @@ public:
 	IAlgorithm() = default;
 	virtual ~IAlgorithm()
 	{
-        stopAlgorithmItem();
-
-        // 主线程退出，此时线程还没有执行完，但类已经析构数据为空，此时线程会崩溃
-        // TRICK 关闭限速 等线程结束后再析构
-        while (_running)
-        {
-            /* do nothing */
-        }
+        // 在窗口关闭时，统一结束所有的线程WM_DESTROY
+//         stopAlgorithmItem();
+// 
+//         // 主线程退出，此时线程还没有执行完，但类已经析构数据为空，此时线程会崩溃
+//         // TRICK 关闭限速 等线程结束后再析构
+//         while (_running)
+//         {
+//             /* do nothing */
+//         }
 	}
 
 public:
@@ -44,6 +45,8 @@ public:
 
 	virtual void stopAlgorithmItem()
 	{
+        // 主线程退出，此时线程还没有执行完，但类已经析构数据为空，此时线程会崩溃
+        // TRICK 关闭限速 等线程结束后再析构
 		_speed = 0;
 	}
 
