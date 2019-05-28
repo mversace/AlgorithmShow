@@ -646,7 +646,7 @@ protected:
 		int jDiff = abs(curKey % _hashKeyDef - _end % _hashKeyDef);
 
 		// 因为可以斜着走
-		return ((max(iDiff, jDiff) - min(iDiff, jDiff)) * dirCost + min(iDiff, jDiff) * diagonalCost) * _greedy;
+		return (((max(iDiff, jDiff) - min(iDiff, jDiff)) * dirCost + min(iDiff, jDiff) * diagonalCost)) * _greedy;
 	}
 
 private:
